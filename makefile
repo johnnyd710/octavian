@@ -10,4 +10,4 @@ main.o : main.cpp array.h
 	$(CC) $(CFLAGS) main.cpp
 
 clean :
-	\rm *.o
+	\rm -r build

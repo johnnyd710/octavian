@@ -6,7 +6,7 @@
 #include <torch/torch.h>
 
 using Convolution = torch::nn::Conv2d;
-using BatchNorm = torch::nn::BatchNorm;
+using BatchNorm = torch::nn::BatchNorm2d;
 using Tensor = torch::Tensor;
 using Sequential = torch::nn::Sequential;
 using Relu = torch::nn::ReLU;
@@ -72,6 +72,7 @@ struct Block : torch::nn::Module {
     }
 };
 
+<template class Block>
 struct Resnet : torch::nn::Module {
 
     int in_channels{64};
@@ -83,7 +84,7 @@ struct Resnet : torch::nn::Module {
     torch::nn::Sequential layer4;
     Relu relu = Relu();
 
-    Resnet(Block block, torch::IntList layers, int image_channels, int num_classes) :
+    Resnet(std::vector<int> layers, int image_channels, int num_classes) :
         conv1(conv_options(image_channels, in_channels, /* kernel */ 7, /* stride */ 2, /* padding */ 3)),
         bn1(in_channels),
         layer1(_make_layer(64, layers[0])),
@@ -100,7 +101,21 @@ struct Resnet : torch::nn::Module {
     }
 
     Tensor forward(Tensor x) {
-        Tensor identity{x.clone()};
+        x = conv1->forward(x);
+        x = bn1->forward(x);
+        x = torch::relu(x);
+        x = torch::max_pool2d(x, 3, 2, 1);
+
+        x = layer1->forward(x);
+        x = layer2->forward(x);
+        x = layer3->forward(x);
+        x = layer4->forward(x);
+
+        x = torch::avg_pool2d(x, 7, 1);
+        x = x.view({x.sizes()[0], -1});
+        x = fc->forward(x);
+
+        return x;
     }
 
 
@@ -108,18 +123,24 @@ struct Resnet : torch::nn::Module {
         torch::nn::Sequential _make_layer(int64_t planes, int64_t blocks, int64_t stride=1) {
             torch::nn::Sequential downsample;
             if (stride != 1 or in_channels != planes * Block::expansion){
-            downsample = torch::nn::Sequential(
-                torch::nn::Conv2d(conv_options(in_channels, planes * Block::expansion, 1, stride)),
-                torch::nn::BatchNorm(planes * Block::expansion)
-            );
+                downsample = torch::nn::Sequential(
+                    torch::nn::Conv2d(conv_options(in_channels, planes * Block::expansion, 1, stride)),
+                    torch::nn::BatchNorm(planes * Block::expansion)
+                );
             }
             torch::nn::Sequential layers;
             layers->push_back(Block(in_channels, planes, downsample, stride));
             in_channels = planes * Block::expansion;
             for (int64_t i = 0; i < blocks; i++){
-            layers->push_back(Block(in_channels, planes));
+                layers->push_back(Block(in_channels, planes));
             }
 
             return layers;
         }
 };
+
+
+Resnet<Block> resnet50(){
+  Resnet<Block> model({3, 4, 6, 3}, 3, 2);
+  return model;
+}

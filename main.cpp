@@ -23,9 +23,11 @@ int main() {
   }
 
   torch::Tensor t = torch::rand({2, 3, 224, 224}).to(device);
-  ResNet<BottleNeck> resnet = resnet101();
+  std::cout << t.sizes() << std::endl;
+  Resnet<Block> resnet = resnet50();
   resnet.to(device);
 
   t = resnet.forward(t);
   std::cout << t.sizes() << std::endl;
+  std::cout << t << std::endl;
 }
