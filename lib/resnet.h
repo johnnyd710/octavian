@@ -23,12 +23,8 @@ torch::nn::Conv2dOptions conv_options(int64_t in_planes, int64_t out_planes, int
 
 struct Block : torch::nn::Module {
 
-    Convolution conv1;
-    BatchNorm bn1;
-    Convolution conv2;
-    BatchNorm bn2;
-    Convolution conv3;
-    BatchNorm bn3;
+    Convolution conv1, conv2, conv3;
+    BatchNorm bn1, bn2, bn3;
     torch::nn::Sequential identity_downsample;
     Relu relu{ Relu() };
     static const int expansion{4};
@@ -78,10 +74,7 @@ struct Resnet : torch::nn::Module {
     int in_channels{64};
     Convolution conv1;
     BatchNorm bn1;
-    torch::nn::Sequential layer1;
-    torch::nn::Sequential layer2;
-    torch::nn::Sequential layer3;
-    torch::nn::Sequential layer4;
+    torch::nn::Sequential layer1, layer2, layer3, layer4;
     Relu relu = Relu();
     torch::nn::Linear fc;
 
