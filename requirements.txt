@@ -1,6 +1,0 @@
-Goal: Classify regions on a fundus image where anomalies are present.
-Requirements:
-- should be easy for a user to submit a fundus image
-- draw circles around anomalous regions
-- classify the regions according to the probable cause
-- create new fundus images using combinations of the training data
