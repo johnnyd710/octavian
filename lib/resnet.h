@@ -72,7 +72,7 @@ struct Block : torch::nn::Module {
     }
 };
 
-<template class Block>
+template <class Block>
 struct Resnet : torch::nn::Module {
 
     int in_channels{64};
@@ -83,6 +83,7 @@ struct Resnet : torch::nn::Module {
     torch::nn::Sequential layer3;
     torch::nn::Sequential layer4;
     Relu relu = Relu();
+    torch::nn::Linear fc;
 
     Resnet(std::vector<int> layers, int image_channels, int num_classes) :
         conv1(conv_options(image_channels, in_channels, /* kernel */ 7, /* stride */ 2, /* padding */ 3)),
@@ -90,7 +91,8 @@ struct Resnet : torch::nn::Module {
         layer1(_make_layer(64, layers[0])),
         layer2(_make_layer(128, layers[1], 2)),
         layer3(_make_layer(256, layers[2], 2)),
-        layer4(_make_layer(512, layers[3], 2))
+        layer4(_make_layer(512, layers[3], 2)),
+        fc(512 * Block::expansion, num_classes)
     {
         register_module("conv1", conv1);
         register_module("bn1", bn1);
@@ -124,8 +126,8 @@ struct Resnet : torch::nn::Module {
             torch::nn::Sequential downsample;
             if (stride != 1 or in_channels != planes * Block::expansion){
                 downsample = torch::nn::Sequential(
-                    torch::nn::Conv2d(conv_options(in_channels, planes * Block::expansion, 1, stride)),
-                    torch::nn::BatchNorm(planes * Block::expansion)
+                    Convolution(conv_options(in_channels, planes * Block::expansion, 1, stride)),
+                    BatchNorm(planes * Block::expansion)
                 );
             }
             torch::nn::Sequential layers;
