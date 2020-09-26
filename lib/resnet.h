@@ -31,7 +31,7 @@ struct Block : torch::nn::Module {
     BatchNorm bn3;
     torch::nn::Sequential identity_downsample;
     Relu relu{ Relu() };
-    int expansion{4};
+    static const int expansion{4};
 
     Block(int in_channels,
         int out_channels,
@@ -58,21 +58,68 @@ struct Block : torch::nn::Module {
 
     Tensor forward(Tensor x) {
         Tensor identity{x.clone()};
-        x = conv1->forward(x);
-        x = bn1->forward(x);
-        x = relu->forward(x);
-        x = conv2->forward(x);
-        x = bn2->forward(x);
-        x = relu->forward(x);
-        x = conv3->forward(x);
-        x = bn3->forward(x);
+        x = relu(bn1(conv1(x)));
+        x = relu(bn2(conv2(x)));
+        x = bn3(conv3(x));
 
         if (!identity_downsample->is_empty()){
             identity = identity_downsample->forward(identity);
         }
 
         x += identity;
-        x = relu->forward(x);
+        x = relu(x);
         return x;
     }
+};
+
+struct Resnet : torch::nn::Module {
+
+    int in_channels{64};
+    Convolution conv1;
+    BatchNorm bn1;
+    torch::nn::Sequential layer1;
+    torch::nn::Sequential layer2;
+    torch::nn::Sequential layer3;
+    torch::nn::Sequential layer4;
+    Relu relu = Relu();
+
+    Resnet(Block block, torch::IntList layers, int image_channels, int num_classes) :
+        conv1(conv_options(image_channels, in_channels, /* kernel */ 7, /* stride */ 2, /* padding */ 3)),
+        bn1(in_channels),
+        layer1(_make_layer(64, layers[0])),
+        layer2(_make_layer(128, layers[1], 2)),
+        layer3(_make_layer(256, layers[2], 2)),
+        layer4(_make_layer(512, layers[3], 2))
+    {
+        register_module("conv1", conv1);
+        register_module("bn1", bn1);
+        register_module("layer1", layer1);
+        register_module("layer2", layer2);
+        register_module("layer3", layer3);
+        register_module("layer4", layer4);
+    }
+
+    Tensor forward(Tensor x) {
+        Tensor identity{x.clone()};
+    }
+
+
+    private:
+        torch::nn::Sequential _make_layer(int64_t planes, int64_t blocks, int64_t stride=1) {
+            torch::nn::Sequential downsample;
+            if (stride != 1 or in_channels != planes * Block::expansion){
+            downsample = torch::nn::Sequential(
+                torch::nn::Conv2d(conv_options(in_channels, planes * Block::expansion, 1, stride)),
+                torch::nn::BatchNorm(planes * Block::expansion)
+            );
+            }
+            torch::nn::Sequential layers;
+            layers->push_back(Block(in_channels, planes, downsample, stride));
+            in_channels = planes * Block::expansion;
+            for (int64_t i = 0; i < blocks; i++){
+            layers->push_back(Block(in_channels, planes));
+            }
+
+            return layers;
+        }
 };
