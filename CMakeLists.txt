@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 project(main VERSION 0.1.0)
 
-set(DCMAKE_PREFIX_PATH "/home/johnny/git/machine-learning-algorithms/deps/libtorch")
+set(Torch_DIR "/home/johnny/git/machine-learning-algorithms/deps/libtorch/share/cmake/Torch")
 
 find_package(Torch REQUIRED)
 

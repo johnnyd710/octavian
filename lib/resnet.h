@@ -134,7 +134,6 @@ struct Resnet : torch::nn::Module {
         }
 };
 
-
 Resnet<Block> resnet50(){
   Resnet<Block> model({3, 4, 6, 3}, 3, 2);
   return model;
