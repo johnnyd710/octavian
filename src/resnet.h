@@ -68,8 +68,7 @@ struct Block : torch::nn::Module {
     }
 };
 
-template <class Block>
-struct Resnet : torch::nn::Module {
+struct ResnetImpl : torch::nn::Module {
 
     int in_channels{64};
     Convolution conv1;
@@ -78,7 +77,7 @@ struct Resnet : torch::nn::Module {
     Relu relu = Relu();
     torch::nn::Linear fc;
 
-    Resnet(std::vector<int> layers, int image_channels, int num_classes) :
+    ResnetImpl(std::vector<int> layers, int image_channels, int num_classes) :
         conv1(conv_options(image_channels, in_channels, /* kernel */ 7, /* stride */ 2, /* padding */ 3)),
         bn1(in_channels),
         layer1(_make_layer(64, layers[0])),
@@ -106,10 +105,10 @@ struct Resnet : torch::nn::Module {
         x = layer3->forward(x);
         x = layer4->forward(x);
 
-        x = torch::avg_pool2d(x, 7, 1);
+        // x = torch::avg_pool2d(x, 7, 1);
+        // std::cout << x.sizes() << std::endl;
         x = x.view({x.sizes()[0], -1});
         x = fc->forward(x);
-
         return x;
     }
 
@@ -133,8 +132,4 @@ struct Resnet : torch::nn::Module {
             return layers;
         }
 };
-
-Resnet<Block> resnet50(){
-  Resnet<Block> model({3, 4, 6, 3}, 3, 2);
-  return model;
-}
+TORCH_MODULE(Resnet);

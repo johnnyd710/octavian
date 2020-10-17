@@ -63,4 +63,5 @@
         "valarray": "cpp",
         "variant": "cpp"
     },
+    "editor.tabSize": 2,
 }

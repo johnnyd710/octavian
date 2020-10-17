@@ -1,7 +1,13 @@
 # Prerequisites
 *.d
 
+lib
+lib64
+bin
+share
 mnist
+
+*.pt
 
 # Compiled Object files
 *.slo
