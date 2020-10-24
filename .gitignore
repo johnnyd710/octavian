@@ -1,10 +1,7 @@
 # Prerequisites
 *.d
 
-lib
-lib64
-bin
-share
+env
 mnist
 
 *.pt

@@ -13,7 +13,7 @@ OUTPUT
 */
 
 #include <torch/torch.h>
-#include "lib/resnet.h"
+#include "src/resnet.h"
 #include <iostream>
 
 int main(int argc, char **argv) {
@@ -57,37 +57,37 @@ int main(int argc, char **argv) {
     torch::load(adam_optimizer, "optimizer-checkpoint.pt");
   }
 
-  // for (int64_t epoch = 1; epoch <= kNumberOfEpochs; ++epoch) {
-  //   int64_t batch_index = 0;
-  //   for (torch::data::Example<>& batch : *data_loader) {
-  //     // Train model with real images.
-  //     resnet->zero_grad();
-  //     torch::Tensor real_images = batch.data;
-  //     torch::Tensor real_labels = batch.target;
-  //     torch::Tensor real_output = resnet->forward(real_images);
+  for (int64_t epoch = 1; epoch <= kNumberOfEpochs; ++epoch) {
+    int64_t batch_index = 0;
+    for (torch::data::Example<>& batch : *data_loader) {
+      // Train model with real images.
+      resnet->zero_grad();
+      torch::Tensor real_images = batch.data;
+      torch::Tensor real_labels = batch.target;
+      torch::Tensor real_output = resnet->forward(real_images);
 
-  //   //   std::cout << real_output << real_labels << std::endl;
+    //   std::cout << real_output << real_labels << std::endl;
       
-  //     torch::Tensor d_loss_real = torch::nn::functional::cross_entropy(real_output, real_labels);
-  //     d_loss_real.backward();
+      torch::Tensor d_loss_real = torch::nn::functional::cross_entropy(real_output, real_labels);
+      d_loss_real.backward();
 
-  //     adam_optimizer.step();
+      adam_optimizer.step();
 
 
-  //     std::printf("\r[%2ld/%2ld] batch # [%3ld] (x10 images per batch) || loss: %.4f",
-  //     epoch,
-  //     kNumberOfEpochs,
-  //     ++batch_index,
-  //     d_loss_real.item<float>());
+      std::printf("\r[%2ld/%2ld] batch # [%3ld] (x10 images per batch) || loss: %.4f",
+      epoch,
+      kNumberOfEpochs,
+      ++batch_index,
+      d_loss_real.item<float>());
 
-  //     if (batch_index % kCheckpointEvery == 0) {
-  //       // Checkpoint the model and optimizer state.
-  //       torch::save(resnet, "checkpoint.pt");
-  //       torch::save(adam_optimizer, "optimizer-checkpoint.pt");
-  //       std::cout << "\n-> checkpoint " << ++checkpoint_counter << '\n';
-  //     }
-  //   }
-  // }
+      if (batch_index % kCheckpointEvery == 0) {
+        // Checkpoint the model and optimizer state.
+        torch::save(resnet, "checkpoint.pt");
+        torch::save(adam_optimizer, "optimizer-checkpoint.pt");
+        std::cout << "\n-> checkpoint " << ++checkpoint_counter << '\n';
+      }
+    }
+  }
 
   std::cout << "Completed training" << std::endl;
 
