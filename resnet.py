@@ -4,6 +4,7 @@ import time
 from torchvision import datasets, transforms, models
 from torchvision.models.resnet import ResNet, BasicBlock
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
+import matplotlib.pyplot as plt
 
 # helper functions
 def calculate_metric(metric_fn, true_y, pred_y):
@@ -86,7 +87,7 @@ def run(restore, epochs):
       torch.save(model.state_dict(), './checkpoint.pt')
       torch.save(optimizer.state_dict(), './optimizer-checkpoint.pt')
     
-    print("Epoch {:d} complete out of {:d}".format(epoch, epochs))
+    print("Epoch {:d} complete out of {:d}".format(epoch+1, epochs))
     print("======================================")
 
   # ----------------- VALIDATION  ----------------- 
@@ -98,6 +99,11 @@ def run(restore, epochs):
   with torch.no_grad():
       for i, data in enumerate(val_loader):
           X, y = data[0].to(device), data[1].to(device)
+
+          # plt.imshow(X[0].permute(1, 2, 0))
+          # plt.show()
+
+          # exit()
 
           outputs = model(X) # this get's the prediction from the network
 
