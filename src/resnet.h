@@ -95,11 +95,15 @@ struct ResnetImpl : torch::nn::Module {
     }
 
     Tensor forward(Tensor x) {
+        std::cout<< x.sizes() << std::endl;
         x = conv1->forward(x);
+        std::cout<< x.sizes() << std::endl;
         x = bn1->forward(x);
+        std::cout<< x.sizes() << std::endl;
         x = torch::relu(x);
+        std::cout<< x.sizes() << std::endl;
         x = torch::max_pool2d(x, 3, 2, 1);
-
+        std::cout<< x.sizes() << std::endl;
         x = layer1->forward(x);
         x = layer2->forward(x);
         x = layer3->forward(x);

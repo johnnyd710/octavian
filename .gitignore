@@ -3,6 +3,7 @@
 
 env
 mnist
+mnist-py
 
 *.pt
 

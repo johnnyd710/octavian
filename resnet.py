@@ -1,129 +1,122 @@
 import torch
 import click
-from torchvision import datasets, transforms
+import time
+from torchvision import datasets, transforms, models
+from torchvision.models.resnet import ResNet, BasicBlock
+from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 
-class Block(torch.nn.Module):
-  
-  def __init__(
-    self,
-    in_channels: int,
-    out_channels: int,
-    stride = 1,
-    identity_downsample = torch.nn.Sequential(),
-    expansion = 4
-  ):
-    super(Block, self).__init__()
-    self.conv1 = torch.nn.Conv2d(in_channels, out_channels, 1, 1, 0)
-    self.conv2 = torch.nn.Conv2d(in_channels, out_channels, 3, stride, 1)
-    self.conv3 = torch.nn.Conv2d(in_channels, out_channels * expansion, 1, 1, 0)
-    self.bn1 = torch.nn.BatchNorm2d(out_channels)
-    self.bn2 = torch.nn.BatchNorm2d(out_channels)
-    self.bn3 = torch.nn.BatchNorm2d(out_channels*expansion)
-    self.identity_downsample = identity_downsample
-    self.relu = torch.nn.ReLU()
-    self.expansion = expansion
+# helper functions
+def calculate_metric(metric_fn, true_y, pred_y):
+    # multi class problems need to have averaging method
+    try:
+        return metric_fn(true_y, pred_y, average="macro")
+    except:
+        return metric_fn(true_y, pred_y)
+    
+def print_scores(p, r, f1, a, batch_size):
+    # just an utility printing function
+    for name, scores in zip(("precision", "recall", "F1", "accuracy"), (p, r, f1, a)):
+        print(f"\t{name.rjust(14, ' ')}: {sum(scores)/batch_size:.4f}")
 
-  def forward(self, x):
-    assert(torch.is_tensor(x))
-    identity = x
-    x = self.relu(self.bn1(self.conv1(x)))
-    x = self.relu(self.bn2(self.conv2(x)))
-    x = self.bn3(self.conv3(x))
+def loss_function(output: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
+  return torch.nn.functional.cross_entropy(output, labels)
 
-    if (self.identity_downsample != None):
-      identity = self.identity_downsample.forward(identity)
-
-    x += identity
-    x = self.relu(x)
-    return x
-
-class ResNet(torch.nn.Module):
-  def __init__(
-    self,
-    layers: list,
-    image_channels: int,
-    num_class: int
-  ):
-    super(ResNet, self).__init__()
-    self.in_channels = 64
-    self.expansion = 4
-    self.conv1 = torch.nn.Conv2d(image_channels, self.in_channels, 7, 2, 3)
-    self.bn1 = torch.nn.BatchNorm2d(self.in_channels)
-    self.layer1 = self.make_layer(64, layers[0])
-    self.layer2 = self.make_layer(128, layers[1])
-    self.layer3 = self.make_layer(256, layers[2])
-    self.layer4 = self.make_layer(512, layers[3])
-    self.avg_pool2d = torch.nn.AvgPool2d(7, 1)
-    self.fc = torch.nn.Linear(512 * self.expansion, num_class)
-
-  def make_layer(
-    self,
-    planes: int,
-    blocks: int,
-    stride = 1
-  ) -> torch.nn.Sequential:
-    if (stride != 1 or self.in_channels != planes * self.expansion):
-      downsample = torch.nn.Sequential(
-        torch.nn.Conv2d(self.in_channels, planes * self.expansion, 1, stride),
-        torch.nn.BatchNorm2d(planes * self.expansion)
-      )
-
-    layers = []
-    layers.append(Block(self.in_channels, planes, stride, downsample))
-    in_channels = planes * self.expansion;
-    for i in range(0, blocks):
-      layers.append(Block(in_channels, planes))
-
-    return torch.nn.Sequential(*layers)
-
-  def forward(self, x: torch.Tensor) -> torch.Tensor:
-    x = self.conv1.forward(x)
-    x = self.bn1.forward(x)
-    x = torch.relu(x)
-    x = torch.max_pool2d(x, 3, 2, 1)
-    x = self.layer1.forward(x)
-    x = self.layer2.forward(x)
-    x = self.layer3.forward(x)
-    x = self.layer4.forward(x)
-    # dont know about this part...
-    # x = self.avg_pool2d.forward(x)
-    # x = x.view
-    # end
-    x = self.fc.forward(x)
-    return x
+class AmdResnet(ResNet):
+  input_channels: int = 1
+  def __init__(self):
+    super(AmdResnet, self).__init__(
+      BasicBlock,
+      [2,2,2,2],
+      num_classes=2
+    )
+    self.conv1 = torch.nn.Conv2d(self.input_channels, 64,
+      kernel_size=(7,7),
+      stride=(2,2),
+      padding=(3,3), bias=False)
 
 @click.command()
 @click.option('--restore', default=1, help='restore from checkpoint?')
 @click.option('--epochs', default=10, help='restore from checkpoint?')
-def load_data(restore, epochs):
+def run(restore, epochs):
   """ loads data from mnist for testing resnet """
   transform = transforms.Compose([
+    transforms.Grayscale(),
+    transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
   ])
-  trainset = datasets.MNIST('./mnist', download=True, transform=transform)
-  loader = torch.utils.data.DataLoader(trainset, batch_size=64, shuffle=True)
+  trainset = datasets.ImageFolder('./data/iChallene-AMD-Training400/Training400', transform=transform)
+  # trainset = datasets.MNIST('./mnist-py', download=True, transform=transform)
+  # testset = datasets.MNIST('./mnist-py', download=True, transform=transform, train=False)
+  testset = trainset
+  loader = torch.utils.data.DataLoader(trainset, batch_size=10, shuffle=True)
+  val_loader = torch.utils.data.DataLoader(trainset, batch_size=10, shuffle=False)
+
+  # set device
+  device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
   # configure resnet
-  resnet = ResNet([3,4,6,3], 1, 10)
+  model = AmdResnet()
 
   # configure optimizer
-  optimizer = torch.optim.Adam(resnet.parameters(), 2e-4)
+  optimizer = torch.optim.Adam(model.parameters(), 2e-4)
   
   if restore:
-    resnet.load_state_dict(torch.load('./checkpoint.pt'))
+    model.load_state_dict(torch.load('./checkpoint.pt'))
     optimizer.load_state_dict(torch.load('./optimizer-checkpoint.pt'))
 
+  losses = []
+  batches = len(loader)
+  val_batches = len(val_loader)
+
   for epoch in range(epochs):
+    total_loss = 0
     for i, batch in enumerate(loader):
-      resnet.zero_grad()
-      images = batch[0]
-      labels = batch[1]
-      output = resnet.forward(images)
+      model.zero_grad()
+      images = batch[0].to(device)
+      labels = batch[1].to(device)
+      output = model.forward(images)
 
-      print(output)
+      loss = loss_function(output, labels)
+      loss.backward()
+      optimizer.step()
+      total_loss += loss
 
-      loss = torch.nn.functional.cross_entropy(output, labels)
+      print("Batch: {:d} Loss: {:.4f}".format(i, total_loss/(i+1)))
+      torch.save(model.state_dict(), './checkpoint.pt')
+      torch.save(optimizer.state_dict(), './optimizer-checkpoint.pt')
+    
+    print("Epoch {:d} complete out of {:d}".format(epoch, epochs))
+    print("======================================")
+
+  # ----------------- VALIDATION  ----------------- 
+  val_losses = 0
+  precision, recall, f1, accuracy = [], [], [], []
+  
+  # set model to evaluating (testing)
+  model.eval()
+  with torch.no_grad():
+      for i, data in enumerate(val_loader):
+          X, y = data[0].to(device), data[1].to(device)
+
+          outputs = model(X) # this get's the prediction from the network
+
+          val_losses += loss_function(outputs, y)
+
+          predicted_classes = torch.max(outputs, 1)[1] # get class from network's prediction
+          
+          # calculate P/R/F1/A metrics for batch
+          for acc, metric in zip((precision, recall, f1, accuracy), 
+                                  (precision_score, recall_score, f1_score, accuracy_score)):
+              acc.append(
+                  calculate_metric(metric, y.cpu(), predicted_classes.cpu())
+              )
+        
+  print(f"validation loss: {val_losses/val_batches}")
+  print_scores(precision, recall, f1, accuracy, val_batches)
+  # losses.append(total_loss/batches) # for plotting learning curve
 
 if __name__ == "__main__":
-  load_data()
+  start_ts = time.time()
+  run()
+  print(f"Training time: {time.time()-start_ts}s")
