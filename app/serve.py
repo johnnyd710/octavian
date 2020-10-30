@@ -1,12 +1,13 @@
 from datetime import datetime
 import logging
 import os
-
+import base64
 from fastapi import FastAPI
 import torch
 import uvicorn
 from pydantic import BaseModel
 from typing import List, Optional
+from torchvision import transforms
 
 from model import AmdResnet
 
@@ -40,11 +41,20 @@ model = AmdResnet()
 model.load_state_dict(torch.load(f"{checkpoint_path}"))
 model.eval()
 
+transformer = transforms.Compose([
+    transforms.Grayscale(),
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize((0.5,), (0.5,))
+])
+
 @app.post(f"{v1_path}{model_path}/predict")
 def read_root(
     retinal_image: RetinalImage
 ) -> torch.Tensor:
-    pred = model.forward(retinal_image.b64image)
+    image = base64.b64decode(retinal_image.b64image)
+    processed_image = transformer(image)
+    pred = model.forward(processed_image)
     value, index = tensor.max(pred)
     return PredictionOut(
         prediction=index,
