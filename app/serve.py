@@ -1,6 +1,8 @@
 from datetime import datetime
 import logging
 import os
+import io
+import re
 import base64
 from fastapi import FastAPI
 import torch
@@ -8,6 +10,7 @@ import uvicorn
 from pydantic import BaseModel
 from typing import List, Optional
 from torchvision import transforms
+from PIL import Image
 
 from model import AmdResnet
 
@@ -15,10 +18,6 @@ class RetinalImage(BaseModel):
     b64image: str
     description: Optional[str] = None
     label: Optional[str] = None
-
-class PredictionOut(BaseModel):
-    prediction: int
-    label: Optional[int] = None
 
 logger = logging.getLogger("octavian")
 
@@ -52,14 +51,15 @@ transformer = transforms.Compose([
 def read_root(
     retinal_image: RetinalImage
 ) -> torch.Tensor:
-    image = base64.b64decode(retinal_image.b64image)
+    image = base64.b64decode(re.sub('^data:image/.+;base64,', '', retinal_image.b64image))
+    image = io.BytesIO(image)
+    image = Image.open(image)
     processed_image = transformer(image)
-    pred = model.forward(processed_image)
-    value, index = tensor.max(pred)
-    return PredictionOut(
-        prediction=index,
-        label=retinal_image.label
-    )
+    processed_image = processed_image.unsqueeze(1)  # resize
+    pred: torch.Tensor = model(processed_image)
+    print(pred)
+    index = torch.argmax(pred, 1)
+    return index.item()
 
 @app.get(f"{v1_path}{model_path}/health")
 def redirect():

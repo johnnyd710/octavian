@@ -30,7 +30,8 @@ class AmdResnet(ResNet):
       [2,2,2,2],
       num_classes=2
     )
-    self.conv1 = torch.nn.Conv2d(self.input_channels, 64,
+    self.conv1 = torch.nn.Conv2d(self.input_channels, 
+      64,
       kernel_size=(7,7),
       stride=(2,2),
       padding=(3,3), bias=False)
@@ -46,7 +47,7 @@ def run(restore, epochs):
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
   ])
-  trainset = datasets.ImageFolder('../data/iChallene-AMD-Training400/Training400', transform=transform)
+  trainset = datasets.ImageFolder('data/iChallene-AMD-Training400/Training400', transform=transform)
   # trainset = datasets.MNIST('./mnist-py', download=True, transform=transform)
   # testset = datasets.MNIST('./mnist-py', download=True, transform=transform, train=False)
   testset = trainset
@@ -63,8 +64,8 @@ def run(restore, epochs):
   optimizer = torch.optim.Adam(model.parameters(), 2e-4)
   
   if restore:
-    model.load_state_dict(torch.load('../checkpoint.pt'))
-    optimizer.load_state_dict(torch.load('.,/optimizer-checkpoint.pt'))
+    model.load_state_dict(torch.load('checkpoint.pt'))
+    optimizer.load_state_dict(torch.load('optimizer-checkpoint.pt'))
 
   losses = []
   batches = len(loader)
@@ -84,8 +85,8 @@ def run(restore, epochs):
       total_loss += loss
 
       print("Batch: {:d} Loss: {:.4f}".format(i, total_loss/(i+1)))
-      torch.save(model.state_dict(), '../checkpoint.pt')
-      torch.save(optimizer.state_dict(), '../optimizer-checkpoint.pt')
+      torch.save(model.state_dict(), 'checkpoint.pt')
+      torch.save(optimizer.state_dict(), 'optimizer-checkpoint.pt')
     
     print("Epoch {:d} complete out of {:d}".format(epoch+1, epochs))
     print("======================================")
