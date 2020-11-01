@@ -11,8 +11,8 @@ from pydantic import BaseModel
 from typing import List, Optional
 from torchvision import transforms
 from PIL import Image
+from efficientnet_pytorch import EfficientNet
 
-from model import AmdResnet
 
 class RetinalImage(BaseModel):
     b64image: str
@@ -36,14 +36,14 @@ app = FastAPI(
 
 checkpoint_path = os.getenv("CHECKPOINT_PATH", "checkpoint.pt")
 logger.info(f"Loading checkpoint file from {checkpoint_path}")
-model = AmdResnet()
+model = EfficientNet.from_name('efficientnet-b1', num_classes=2)
 model.load_state_dict(torch.load(f"{checkpoint_path}"))
 model.eval()
 
 transformer = transforms.Compose([
-    transforms.Grayscale(),
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
+    transforms.Lambda(lambda t: t[:3, ...]),  # remove alpha channel
     transforms.Normalize((0.5,), (0.5,))
 ])
 
@@ -54,8 +54,8 @@ def read_root(
     image = base64.b64decode(re.sub('^data:image/.+;base64,', '', retinal_image.b64image))
     image = io.BytesIO(image)
     image = Image.open(image)
-    processed_image = transformer(image)
-    processed_image = processed_image.unsqueeze(1)  # resize
+    processed_image: torch.Tensor = transformer(image)
+    processed_image = processed_image.unsqueeze(0)  # resize
     pred: torch.Tensor = model(processed_image)
     print(pred)
     index = torch.argmax(pred, 1)

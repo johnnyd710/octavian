@@ -3,6 +3,7 @@ import click
 import time
 from torchvision import datasets, transforms, models
 from torchvision.models.resnet import ResNet, BasicBlock
+from efficientnet_pytorch import EfficientNet
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 import matplotlib.pyplot as plt
 
@@ -22,19 +23,21 @@ def print_scores(p, r, f1, a, batch_size):
 def loss_function(output: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
   return torch.nn.functional.cross_entropy(output, labels)
 
-class AmdResnet(ResNet):
-  input_channels: int = 1
-  def __init__(self):
-    super(AmdResnet, self).__init__(
-      BasicBlock,
-      [2,2,2,2],
-      num_classes=2
-    )
-    self.conv1 = torch.nn.Conv2d(self.input_channels, 
-      64,
-      kernel_size=(7,7),
-      stride=(2,2),
-      padding=(3,3), bias=False)
+# class AmdResnet(ResNet):
+#   input_channels: int = 1
+#   def __init__(self):
+#     super(AmdResnet, self).__init__(
+#       BasicBlock,
+#       [2,2,2,2],
+#       num_classes=2
+#     )
+#     self.conv1 = torch.nn.Conv2d(self.input_channels, 
+#       64,
+#       kernel_size=(7,7),
+#       stride=(2,2),
+#       padding=(3,3), bias=False)
+
+
 
 @click.command()
 @click.option('--restore', default=1, help='restore from checkpoint?')
@@ -42,7 +45,6 @@ class AmdResnet(ResNet):
 def run(restore, epochs):
   """ loads data from mnist for testing resnet """
   transform = transforms.Compose([
-    transforms.Grayscale(),
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
@@ -58,7 +60,9 @@ def run(restore, epochs):
   device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
   # configure resnet
-  model = AmdResnet()
+  # model = AmdResnet()
+  # configure efficientnet
+  model = EfficientNet.from_pretrained('efficientnet-b1', num_classes=2)
 
   # configure optimizer
   optimizer = torch.optim.Adam(model.parameters(), 2e-4)
