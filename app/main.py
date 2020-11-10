@@ -62,7 +62,7 @@ def read_root(
     if index.item() == 1:
         return 'no amd with probability {:.2f} %'.format(confidence[1] * 100)
     else:
-        return 'no amd with probability {:.2f} %'.format(confidence[0] * 100)
+        return 'amd with probability {:.2f} %'.format(confidence[0] * 100)
 
 @app.get(f"{v1_path}{model_path}/health")
 def redirect():

@@ -1,6 +1,6 @@
 # the octavian project
 
-python3 app/datadownloader.py -- ...
+Get the sample data by running ```python3 app/datadownloader.py -- ...```
 python3 
 
 or pull docker container (docker pull johndimatteo/octavian)
