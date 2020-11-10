@@ -5,7 +5,7 @@ env
 mnist
 mnist-py
 
-*.pt
+optimizer-checkpoint.pt
 
 # Compiled Object files
 *.slo

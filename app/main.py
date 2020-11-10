@@ -56,10 +56,13 @@ def read_root(
     processed_image = processed_image.unsqueeze(0)  # resize
     pred: torch.Tensor = model(processed_image)
     index = torch.argmax(pred, 1)
+    # pred is a logit function, to convert to probability, use softmax:
+    confidence = torch.softmax(pred, dim=1).detach().numpy()[0]
+    print(confidence)
     if index.item() == 1:
-        return 'no amd'
+        return 'no amd with probability {:.2f} %'.format(confidence[1] * 100)
     else:
-        return 'amd'
+        return 'no amd with probability {:.2f} %'.format(confidence[0] * 100)
 
 @app.get(f"{v1_path}{model_path}/health")
 def redirect():

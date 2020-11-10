@@ -27,3 +27,6 @@ Save and commit checkpoint.pt file to repo.
 
 ## results
 trained 5 epochs on the dataset from ... , achieving 98% accuracy, 
+
+## todos
+- get confidence with prediction
