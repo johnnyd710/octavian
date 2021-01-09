@@ -27,5 +27,5 @@ To show how machine learning models can be deployed quickly using Python, Docker
 
 ## method
 EfficientNet, transfer learning using pretrained weights. Remove the last layer meant for 1000 classes to a simple 2 class layer: AMD and non-AMD.
-Save and commit checkpoint.pt file to repo.
+Save and commit checkpoint . pt file to repo.
 [See Google's EfficientNet paper here.](https://ai.googleblog.com/2019/05/efficientnet-improving-accuracy-and.html)
