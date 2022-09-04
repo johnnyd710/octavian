@@ -13,11 +13,11 @@ Alternatively, you can pull docker container (```docker pull johndimatteo/octavi
 and run with ```docker run -d --name octavian -p 80:80```
 
 ## why Octavian
-I name every one of my projects after a Roman Emperor.
+
 Gaius Octavius was Julis Caesar's adopted son (later known as Octavian, and then Augustus Caesar). When Caesar was killed,
 Octavius was only 18, but nevertheless he fought and defeated Mark Antony to become the Rome's first Emperor. 
 
-'Oct' reminds me of optometry, probably because of OCT scans. 
+( 'Oct' reminds me of optometry, probably because of OCT scans. )
 
 ## problem statement
 Given an image of the retina (any size, it will be normalized to 224x244 pixels anyway), determine if the image has signs of Age Macular Degeneration (AMD). If so, respond `amd` with a confidence score. If not, respond `no amd` with a confidence score.
